@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
+    "playground": "tsx src/playground.ts",
     "build": "tsc",
     "start": "node dist/src/index.js",
     "test": "npm run build && node --test dist/test"
