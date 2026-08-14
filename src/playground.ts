@@ -16,6 +16,10 @@ const greenhouseBoards: readonly GreenhouseBoard[] = [
     boardToken: "canonical",
     companyName: "Canonical",
   },
+  {
+    boardToken: "gleanwork",
+    companyName: "Glean",
+  },
 ];
 
 const leverSites: readonly LeverSite[] = [
@@ -23,9 +27,20 @@ const leverSites: readonly LeverSite[] = [
     site: "relay",
     companyName: "Relay",
   },
+  {
+    site: "bluelightconsulting",
+    companyName: "Bluelight Consulting",
+  },
+  {
+    site: "xsolla",
+    companyName: "Xsolla",
+  },
+  {
+    site: "firstup",
+    companyName: "Firstup",
+  },
 ];
-
-// Edit these filters for each manual run. Country is optional.
+// Edit these filters for each manual run.
 const filters: JobFilters = {
   titleKeywords: ["frontend", "front-end", "web developer", "web frontend"],
   skills: ["react", "typescript"],

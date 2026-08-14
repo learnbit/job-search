@@ -255,26 +255,34 @@ test("titleKeywords, skills, and workplaces combine with AND semantics", () => {
   );
 });
 
-test("country matching remains case-insensitive and requires a location", () => {
+test("location does not affect filtering", () => {
   const jobs = [
-    job({ externalId: "match", location: "Remote - us" }),
-    job({ externalId: "other", location: "Remote - Canada" }),
-    job({ externalId: "missing", location: null }),
+    job({
+      externalId: "bolivia",
+      title: "Senior Frontend Engineer",
+      description: "React and TypeScript",
+      location: "Cochabamba, Bolivia",
+      workplace: "remote",
+    }),
+    job({
+      externalId: "uk",
+      title: "Senior Frontend Engineer",
+      description: "React and TypeScript",
+      location: "Remote - UK",
+      workplace: "remote",
+    }),
   ];
 
-  assert.deepEqual(ids(filterJobs(jobs, { country: "US" })), ["match"]);
-});
-
-test("an empty or blank country does not filter jobs", () => {
-  const jobs = [
-    job({ externalId: "located", location: "Canada" }),
-    job({ externalId: "missing", location: null }),
-  ];
-
-  assert.deepEqual(ids(filterJobs(jobs, { country: "  " })), [
-    "located",
-    "missing",
-  ]);
+  assert.deepEqual(
+    ids(
+      filterJobs(jobs, {
+        titleKeywords: ["frontend"],
+        skills: ["react"],
+        workplaces: ["remote"],
+      }),
+    ),
+    ["bolivia", "uk"],
+  );
 });
 
 function ids(jobs: readonly CollectedJob[]): string[] {
