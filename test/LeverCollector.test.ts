@@ -97,3 +97,38 @@ test("returns successful sites and logs when another Lever site fails", async ()
   assert.match(errors[0] ?? "", /failing-site/);
   assert.match(errors[0] ?? "", /503 Unavailable/);
 });
+
+test("skips malformed postings without discarding valid postings", async () => {
+  const errors: string[] = [];
+  const fakeFetch = async (): Promise<Response> =>
+    Response.json([
+      {
+        id: "posting-valid-1",
+        text: "Backend Engineer",
+        hostedUrl: "https://jobs.lever.co/example/posting-valid-1",
+      },
+      {
+        id: "posting-malformed",
+        hostedUrl: "https://jobs.lever.co/example/posting-malformed",
+      },
+      {
+        id: "posting-valid-2",
+        text: "Frontend Engineer",
+        applyUrl: "https://jobs.lever.co/example/posting-valid-2/apply",
+      },
+    ]);
+  const logger = { error: (message: string): void => void errors.push(message) };
+  const collector = new LeverCollector(fakeFetch, logger);
+
+  const jobs = await collector.collect([
+    { site: "example", companyName: "Example Company" },
+  ]);
+
+  assert.deepEqual(
+    jobs.map((job) => job.externalId),
+    ["posting-valid-1", "posting-valid-2"],
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0] ?? "", /Skipped 1 malformed posting/);
+  assert.match(errors[0] ?? "", /site "example"/);
+});

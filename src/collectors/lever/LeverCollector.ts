@@ -1,9 +1,5 @@
 import type { CollectedJob, JobCollector } from "../types.js";
-import type {
-  LeverPosting,
-  LeverPostingsResponse,
-  LeverSite,
-} from "./types.js";
+import type { LeverPosting, LeverSite } from "./types.js";
 
 type Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 type ErrorLogger = Pick<Console, "error">;
@@ -49,11 +45,16 @@ export class LeverCollector implements JobCollector<readonly LeverSite[]> {
       throw new Error("Lever API response was not an array");
     }
 
-    if (!payload.every(isLeverPosting)) {
-      throw new Error("Lever API response contained a malformed posting");
+    const validPostings = payload.filter(isLeverPosting);
+    const skippedCount = payload.length - validPostings.length;
+
+    if (skippedCount > 0) {
+      this.logger.error(
+        `[lever] Skipped ${skippedCount} malformed posting(s) from site "${site.site}" (${site.companyName})`,
+      );
     }
 
-    return (payload as LeverPostingsResponse).map((posting) =>
+    return validPostings.map((posting) =>
       this.normalize(posting, site),
     );
   }
