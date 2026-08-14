@@ -1,7 +1,8 @@
 import type { CollectedJob } from "../collectors/types.js";
 
 export interface JobFilters {
-  keywords?: readonly string[];
+  titleKeywords?: readonly string[];
+  skills?: readonly string[];
   country?: string;
   remoteOnly?: boolean;
 }
@@ -10,16 +11,24 @@ export function filterJobs(
   jobs: readonly CollectedJob[],
   filters: JobFilters,
 ): CollectedJob[] {
-  const keywords = (filters.keywords ?? [])
-    .map((keyword) => keyword.trim().toLowerCase())
-    .filter((keyword) => keyword.length > 0);
+  const titleKeywords = normalizeTerms(filters.titleKeywords);
+  const skills = normalizeTerms(filters.skills);
   const country = filters.country?.trim().toLowerCase() || null;
 
   return jobs.filter((job) => {
-    if (keywords.length > 0) {
+    const title = job.title.toLowerCase();
+
+    if (
+      titleKeywords.length > 0 &&
+      !titleKeywords.some((keyword) => title.includes(keyword))
+    ) {
+      return false;
+    }
+
+    if (skills.length > 0) {
       const searchableText = `${job.title}\n${job.description ?? ""}`.toLowerCase();
 
-      if (!keywords.some((keyword) => searchableText.includes(keyword))) {
+      if (!skills.some((skill) => searchableText.includes(skill))) {
         return false;
       }
     }
@@ -39,4 +48,10 @@ export function filterJobs(
 
     return true;
   });
+}
+
+function normalizeTerms(terms: readonly string[] | undefined): string[] {
+  return (terms ?? [])
+    .map((term) => term.trim().toLowerCase())
+    .filter((term) => term.length > 0);
 }
