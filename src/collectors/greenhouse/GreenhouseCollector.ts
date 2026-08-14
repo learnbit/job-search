@@ -63,7 +63,8 @@ export class GreenhouseCollector
       location: job.location?.name ?? null,
       url: job.absolute_url,
       description: job.content ?? null,
-      postedAt: job.updated_at ?? null,
+      postedAt: null,
+      updatedAt: job.updated_at ?? null,
     };
   }
 }

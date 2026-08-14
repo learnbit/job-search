@@ -7,6 +7,7 @@ export interface CollectedJob {
   url: string;
   description: string | null;
   postedAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface JobCollector<TConfig> {

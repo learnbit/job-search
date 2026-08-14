@@ -38,7 +38,8 @@ test("normalizes jobs from a Greenhouse board", async () => {
       location: "Remote",
       url: "https://example.com/jobs/123",
       description: "<p>Build useful things.</p>",
-      postedAt: "2026-08-14T12:00:00Z",
+      postedAt: null,
+      updatedAt: "2026-08-14T12:00:00Z",
     },
   ]);
 });
@@ -74,6 +75,7 @@ test("returns successful boards when another board fails", async () => {
   assert.equal(jobs[0]?.location, null);
   assert.equal(jobs[0]?.description, null);
   assert.equal(jobs[0]?.postedAt, null);
+  assert.equal(jobs[0]?.updatedAt, null);
   assert.equal(errors.length, 1);
   assert.match(errors[0] ?? "", /failing-board/);
   assert.match(errors[0] ?? "", /503 Unavailable/);
