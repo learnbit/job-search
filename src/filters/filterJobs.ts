@@ -1,10 +1,11 @@
 import type { CollectedJob } from "../collectors/types.js";
+import type { WorkplaceType } from "../normalizers/workplace.js";
 
 export interface JobFilters {
   titleKeywords?: readonly string[];
   skills?: readonly string[];
   country?: string;
-  remoteOnly?: boolean;
+  workplaces?: readonly WorkplaceType[];
 }
 
 export function filterJobs(
@@ -14,6 +15,7 @@ export function filterJobs(
   const titleKeywords = normalizeTerms(filters.titleKeywords);
   const skills = normalizeTerms(filters.skills);
   const country = filters.country?.trim().toLowerCase() || null;
+  const workplaces = new Set(filters.workplaces ?? []);
 
   return jobs.filter((job) => {
     const title = job.title.toLowerCase();
@@ -40,10 +42,8 @@ export function filterJobs(
       return false;
     }
 
-    if (filters.remoteOnly === true) {
-      if (job.workplace !== "remote") {
-        return false;
-      }
+    if (workplaces.size > 0 && !workplaces.has(job.workplace)) {
+      return false;
     }
 
     return true;

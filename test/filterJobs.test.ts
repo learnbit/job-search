@@ -130,7 +130,104 @@ test("titleKeywords and skills combine with AND semantics", () => {
   );
 });
 
-test("titleKeywords, skills, and remoteOnly combine with AND semantics", () => {
+test("omitted workplaces do not filter jobs", () => {
+  const jobs = [
+    job({ externalId: "remote", workplace: "remote" }),
+    job({ externalId: "hybrid", workplace: "hybrid" }),
+    job({ externalId: "onsite", workplace: "onsite" }),
+    job({ externalId: "unknown", workplace: "unknown" }),
+  ];
+
+  assert.deepEqual(ids(filterJobs(jobs, {})), [
+    "remote",
+    "hybrid",
+    "onsite",
+    "unknown",
+  ]);
+});
+
+test("empty workplaces do not filter jobs", () => {
+  const jobs = [
+    job({ externalId: "remote", workplace: "remote" }),
+    job({ externalId: "unknown", workplace: "unknown" }),
+  ];
+
+  assert.deepEqual(ids(filterJobs(jobs, { workplaces: [] })), [
+    "remote",
+    "unknown",
+  ]);
+});
+
+test('["remote"] keeps only remote jobs', () => {
+  const jobs = [
+    job({ externalId: "remote", workplace: "remote" }),
+    job({ externalId: "unknown", workplace: "unknown" }),
+    job({ externalId: "hybrid", workplace: "hybrid" }),
+  ];
+
+  assert.deepEqual(ids(filterJobs(jobs, { workplaces: ["remote"] })), [
+    "remote",
+  ]);
+});
+
+test('["remote", "unknown"] keeps both workplace types', () => {
+  const jobs = [
+    job({ externalId: "remote", workplace: "remote" }),
+    job({ externalId: "unknown", workplace: "unknown" }),
+    job({ externalId: "onsite", workplace: "onsite" }),
+  ];
+
+  assert.deepEqual(
+    ids(filterJobs(jobs, { workplaces: ["remote", "unknown"] })),
+    ["remote", "unknown"],
+  );
+});
+
+test('["hybrid", "onsite"] keeps both workplace types', () => {
+  const jobs = [
+    job({ externalId: "remote", workplace: "remote" }),
+    job({ externalId: "hybrid", workplace: "hybrid" }),
+    job({ externalId: "onsite", workplace: "onsite" }),
+  ];
+
+  assert.deepEqual(
+    ids(filterJobs(jobs, { workplaces: ["hybrid", "onsite"] })),
+    ["hybrid", "onsite"],
+  );
+});
+
+test("workplaces use normalized workplace rather than raw location text", () => {
+  const jobs = [
+    job({
+      externalId: "normalized-remote",
+      location: "New York, NY",
+      workplace: "remote",
+    }),
+    job({
+      externalId: "raw-remote-only",
+      location: "Remote - US",
+      workplace: "unknown",
+    }),
+  ];
+
+  assert.deepEqual(ids(filterJobs(jobs, { workplaces: ["remote"] })), [
+    "normalized-remote",
+  ]);
+});
+
+test("duplicate workplace values do not affect results", () => {
+  const jobs = [
+    job({ externalId: "remote", workplace: "remote" }),
+    job({ externalId: "hybrid", workplace: "hybrid" }),
+  ];
+
+  assert.deepEqual(
+    ids(filterJobs(jobs, { workplaces: ["remote", "remote"] })),
+    ["remote"],
+  );
+});
+
+test("titleKeywords, skills, and workplaces combine with AND semantics", () => {
   const jobs = [
     job({
       externalId: "match",
@@ -151,7 +248,7 @@ test("titleKeywords, skills, and remoteOnly combine with AND semantics", () => {
       filterJobs(jobs, {
         titleKeywords: ["frontend"],
         skills: ["react"],
-        remoteOnly: true,
+        workplaces: ["remote"],
       }),
     ),
     ["match"],
@@ -178,16 +275,6 @@ test("an empty or blank country does not filter jobs", () => {
     "located",
     "missing",
   ]);
-});
-
-test("remoteOnly remains based on workplace rather than location text", () => {
-  const jobs = [
-    job({ externalId: "remote", location: "New York, NY", workplace: "remote" }),
-    job({ externalId: "raw-remote-only", location: "Remote - US" }),
-    job({ externalId: "missing", location: null, workplace: "unknown" }),
-  ];
-
-  assert.deepEqual(ids(filterJobs(jobs, { remoteOnly: true })), ["remote"]);
 });
 
 function ids(jobs: readonly CollectedJob[]): string[] {

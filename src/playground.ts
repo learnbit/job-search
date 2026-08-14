@@ -27,14 +27,9 @@ const leverSites: readonly LeverSite[] = [
 
 // Edit these filters for each manual run. Country is optional.
 const filters: JobFilters = {
-  titleKeywords: [
-    "frontend",
-    "front-end",
-    "web developer",
-    "web frontend",
-  ],
+  titleKeywords: ["frontend", "front-end", "web developer", "web frontend"],
   skills: ["react", "typescript"],
-  remoteOnly: true,
+  workplaces: ["remote", "unknown"],
 };
 
 const placeholder = "replace-me";
