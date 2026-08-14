@@ -1,0 +1,67 @@
+import type { GreenhouseBoard } from "../collectors/greenhouse/types.js";
+import type { LeverSite } from "../collectors/lever/types.js";
+
+export type CompanySource =
+  | {
+      readonly companyName: string;
+      readonly ats: "greenhouse";
+      readonly boardToken: string;
+    }
+  | {
+      readonly companyName: string;
+      readonly ats: "lever";
+      readonly site: string;
+    };
+
+export const companies: readonly CompanySource[] = [
+  {
+    companyName: "Canonical",
+    ats: "greenhouse",
+    boardToken: "canonical",
+  },
+  {
+    companyName: "Glean",
+    ats: "greenhouse",
+    boardToken: "gleanwork",
+  },
+  {
+    companyName: "Relay",
+    ats: "lever",
+    site: "relay",
+  },
+  {
+    companyName: "Bluelight Consulting",
+    ats: "lever",
+    site: "bluelightconsulting",
+  },
+  {
+    companyName: "Xsolla",
+    ats: "lever",
+    site: "xsolla",
+  },
+  {
+    companyName: "Firstup",
+    ats: "lever",
+    site: "firstup",
+  },
+];
+
+export function getGreenhouseBoards(
+  sources: readonly CompanySource[],
+): GreenhouseBoard[] {
+  return sources.flatMap((source) =>
+    source.ats === "greenhouse"
+      ? [{ boardToken: source.boardToken, companyName: source.companyName }]
+      : [],
+  );
+}
+
+export function getLeverSites(
+  sources: readonly CompanySource[],
+): LeverSite[] {
+  return sources.flatMap((source) =>
+    source.ats === "lever"
+      ? [{ site: source.site, companyName: source.companyName }]
+      : [],
+  );
+}

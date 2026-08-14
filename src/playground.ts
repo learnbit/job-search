@@ -4,42 +4,18 @@ import {
   type ConfiguredCollector,
 } from "./collectors/CollectorOrchestrator.js";
 import { GreenhouseCollector } from "./collectors/greenhouse/GreenhouseCollector.js";
-import type { GreenhouseBoard } from "./collectors/greenhouse/types.js";
 import { LeverCollector } from "./collectors/lever/LeverCollector.js";
-import type { LeverSite } from "./collectors/lever/types.js";
 import type { CollectedJob } from "./collectors/types.js";
 import { filterJobs, type JobFilters } from "./filters/filterJobs.js";
+import {
+  companies,
+  getGreenhouseBoards,
+  getLeverSites,
+} from "./registry/companies.js";
 
-// Edit these arrays to enable Greenhouse, Lever, or both.
-const greenhouseBoards: readonly GreenhouseBoard[] = [
-  {
-    boardToken: "canonical",
-    companyName: "Canonical",
-  },
-  {
-    boardToken: "gleanwork",
-    companyName: "Glean",
-  },
-];
+const greenhouseBoards = getGreenhouseBoards(companies);
+const leverSites = getLeverSites(companies);
 
-const leverSites: readonly LeverSite[] = [
-  {
-    site: "relay",
-    companyName: "Relay",
-  },
-  {
-    site: "bluelightconsulting",
-    companyName: "Bluelight Consulting",
-  },
-  {
-    site: "xsolla",
-    companyName: "Xsolla",
-  },
-  {
-    site: "firstup",
-    companyName: "Firstup",
-  },
-];
 // Edit these filters for each manual run.
 const filters: JobFilters = {
   titleKeywords: ["frontend", "front-end", "web developer", "web frontend"],
@@ -47,24 +23,17 @@ const filters: JobFilters = {
   workplaces: ["remote", "unknown"],
 };
 
-const placeholder = "replace-me";
 const registrations: ConfiguredCollector[] = [];
-const activeGreenhouseBoards = greenhouseBoards.filter(
-  (board) => board.boardToken.trim() !== "" && board.boardToken !== placeholder
-);
-const activeLeverSites = leverSites.filter(
-  (site) => site.site.trim() !== "" && site.site !== placeholder
-);
 
-if (activeGreenhouseBoards.length > 0) {
+if (greenhouseBoards.length > 0) {
   registrations.push(
-    configureCollector(new GreenhouseCollector(), activeGreenhouseBoards)
+    configureCollector(new GreenhouseCollector(), greenhouseBoards),
   );
 }
 
-if (activeLeverSites.length > 0) {
+if (leverSites.length > 0) {
   registrations.push(
-    configureCollector(new LeverCollector(), activeLeverSites)
+    configureCollector(new LeverCollector(), leverSites),
   );
 }
 
