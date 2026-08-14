@@ -36,6 +36,7 @@ test("normalizes jobs from a Greenhouse board", async () => {
       company: "Example Company",
       title: "Software Engineer",
       location: "Remote",
+      workplace: "remote",
       url: "https://example.com/jobs/123",
       description: "<p>Build useful things.</p>",
       postedAt: null,
@@ -73,6 +74,7 @@ test("returns successful boards when another board fails", async () => {
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0]?.externalId, "456");
   assert.equal(jobs[0]?.location, null);
+  assert.equal(jobs[0]?.workplace, "unknown");
   assert.equal(jobs[0]?.description, null);
   assert.equal(jobs[0]?.postedAt, null);
   assert.equal(jobs[0]?.updatedAt, null);

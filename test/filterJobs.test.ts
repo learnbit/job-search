@@ -79,9 +79,9 @@ test("an empty or blank country does not filter jobs", () => {
 
 test("remoteOnly matches clear remote locations but not missing locations", () => {
   const jobs = [
-    job({ externalId: "remote", location: "Remote - Americas" }),
-    job({ externalId: "onsite", location: "New York, NY" }),
-    job({ externalId: "missing", location: null }),
+    job({ externalId: "remote", location: "New York, NY", workplace: "remote" }),
+    job({ externalId: "raw-remote-only", location: "Remote - US" }),
+    job({ externalId: "missing", location: null, workplace: "unknown" }),
   ];
 
   assert.deepEqual(ids(filterJobs(jobs, { remoteOnly: true })), ["remote"]);
@@ -89,10 +89,30 @@ test("remoteOnly matches clear remote locations but not missing locations", () =
 
 test("active filter categories combine with AND semantics", () => {
   const jobs = [
-    job({ externalId: "match", title: "React Engineer", location: "Remote - US" }),
-    job({ externalId: "wrong-keyword", title: "Go Engineer", location: "Remote - US" }),
-    job({ externalId: "wrong-country", title: "React Engineer", location: "Remote - CA" }),
-    job({ externalId: "not-remote", title: "React Engineer", location: "US" }),
+    job({
+      externalId: "match",
+      title: "React Engineer",
+      location: "Remote - US",
+      workplace: "remote",
+    }),
+    job({
+      externalId: "wrong-keyword",
+      title: "Go Engineer",
+      location: "Remote - US",
+      workplace: "remote",
+    }),
+    job({
+      externalId: "wrong-country",
+      title: "React Engineer",
+      location: "Remote - CA",
+      workplace: "remote",
+    }),
+    job({
+      externalId: "not-remote",
+      title: "React Engineer",
+      location: "Remote - US",
+      workplace: "unknown",
+    }),
   ];
 
   assert.deepEqual(
@@ -118,6 +138,7 @@ function job(overrides: Partial<CollectedJob> = {}): CollectedJob {
     company: "Example Company",
     title: "Software Engineer",
     location: "New York, US",
+    workplace: "unknown",
     url: "https://example.com/jobs/job",
     description: null,
     postedAt: null,

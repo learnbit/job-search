@@ -4,6 +4,7 @@ import type {
   GreenhouseJob,
   GreenhouseJobsResponse,
 } from "./types.js";
+import { normalizeWorkplace } from "../../normalizers/workplace.js";
 
 type Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 type ErrorLogger = Pick<Console, "error">;
@@ -55,12 +56,15 @@ export class GreenhouseCollector
   }
 
   private normalize(job: GreenhouseJob, board: GreenhouseBoard): CollectedJob {
+    const location = job.location?.name ?? null;
+
     return {
       source: this.source,
       externalId: String(job.id),
       company: board.companyName,
       title: job.title,
-      location: job.location?.name ?? null,
+      location,
+      workplace: normalizeWorkplace(location),
       url: job.absolute_url,
       description: job.content ?? null,
       postedAt: null,

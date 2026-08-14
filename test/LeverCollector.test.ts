@@ -44,6 +44,7 @@ test("normalizes Lever postings and preserves timestamp semantics", async () => 
       company: "Example Company",
       title: "Software Engineer",
       location: "Remote",
+      workplace: "remote",
       url: "https://jobs.lever.co/example/posting-123",
       description: "<p>Build useful things.</p>",
       postedAt: null,
@@ -55,6 +56,7 @@ test("normalizes Lever postings and preserves timestamp semantics", async () => 
       company: "Example Company",
       title: "Product Engineer",
       location: null,
+      workplace: "unknown",
       url: "https://jobs.lever.co/example/posting-456",
       description: null,
       postedAt: null,
@@ -90,6 +92,7 @@ test("returns successful sites and logs when another Lever site fails", async ()
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0]?.externalId, "posting-789");
   assert.equal(jobs[0]?.location, "Toronto, Canada");
+  assert.equal(jobs[0]?.workplace, "unknown");
   assert.equal(jobs[0]?.url, "https://jobs.lever.co/working-site/posting-789/apply");
   assert.equal(jobs[0]?.postedAt, null);
   assert.equal(jobs[0]?.updatedAt, null);

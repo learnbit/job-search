@@ -94,6 +94,7 @@ function job(source: string, externalId: string): CollectedJob {
     company: "Example Company",
     title: "Example Job",
     location: null,
+    workplace: "unknown",
     url: `https://example.com/jobs/${externalId}`,
     description: null,
     postedAt: null,

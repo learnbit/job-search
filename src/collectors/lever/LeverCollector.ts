@@ -1,5 +1,6 @@
 import type { CollectedJob, JobCollector } from "../types.js";
 import type { LeverPosting, LeverSite } from "./types.js";
+import { normalizeWorkplace } from "../../normalizers/workplace.js";
 
 type Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 type ErrorLogger = Pick<Console, "error">;
@@ -60,15 +61,18 @@ export class LeverCollector implements JobCollector<readonly LeverSite[]> {
   }
 
   private normalize(posting: LeverPosting, site: LeverSite): CollectedJob {
+    const location =
+      posting.categories?.location ??
+      posting.categories?.allLocations?.[0] ??
+      null;
+
     return {
       source: this.source,
       externalId: posting.id,
       company: site.companyName,
       title: posting.text,
-      location:
-        posting.categories?.location ??
-        posting.categories?.allLocations?.[0] ??
-        null,
+      location,
+      workplace: normalizeWorkplace(location),
       url: posting.hostedUrl ?? posting.applyUrl ?? "",
       description: posting.description ?? null,
       postedAt: null,

@@ -32,7 +32,7 @@ export function filterJobs(
     }
 
     if (filters.remoteOnly === true) {
-      if (location === null || !/\bremote\b/i.test(location)) {
+      if (job.workplace !== "remote") {
         return false;
       }
     }

@@ -13,41 +13,43 @@ import { filterJobs, type JobFilters } from "./filters/filterJobs.js";
 // Edit these arrays to enable Greenhouse, Lever, or both.
 const greenhouseBoards: readonly GreenhouseBoard[] = [
   {
-    boardToken: "replace-me",
-    companyName: "Example Greenhouse Company",
+    boardToken: "canonical",
+    companyName: "Canonical",
   },
 ];
 
 const leverSites: readonly LeverSite[] = [
   {
-    site: "replace-me",
-    companyName: "Example Lever Company",
+    site: "relay",
+    companyName: "Relay",
   },
 ];
 
 // Edit these filters for each manual run. Country is optional.
 const filters: JobFilters = {
   keywords: ["react", "frontend"],
-  remoteOnly: true,
+  // remoteOnly: true,
 };
 
 const placeholder = "replace-me";
 const registrations: ConfiguredCollector[] = [];
 const activeGreenhouseBoards = greenhouseBoards.filter(
-  (board) => board.boardToken.trim() !== "" && board.boardToken !== placeholder,
+  (board) => board.boardToken.trim() !== "" && board.boardToken !== placeholder
 );
 const activeLeverSites = leverSites.filter(
-  (site) => site.site.trim() !== "" && site.site !== placeholder,
+  (site) => site.site.trim() !== "" && site.site !== placeholder
 );
 
 if (activeGreenhouseBoards.length > 0) {
   registrations.push(
-    configureCollector(new GreenhouseCollector(), activeGreenhouseBoards),
+    configureCollector(new GreenhouseCollector(), activeGreenhouseBoards)
   );
 }
 
 if (activeLeverSites.length > 0) {
-  registrations.push(configureCollector(new LeverCollector(), activeLeverSites));
+  registrations.push(
+    configureCollector(new LeverCollector(), activeLeverSites)
+  );
 }
 
 const orchestrator = new CollectorOrchestrator(registrations);
@@ -83,6 +85,7 @@ function toReadableJob(job: CollectedJob) {
     company: job.company,
     title: job.title,
     location: job.location,
+    workplace: job.workplace,
     url: job.url,
     postedAt: job.postedAt,
     updatedAt: job.updatedAt,
