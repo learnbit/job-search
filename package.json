@@ -5,17 +5,28 @@
   "description": "Modular collectors for public job board APIs",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "^20.19 || ^22.12 || >=24.0"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
     "playground": "tsx src/playground.ts",
+    "prebuild": "npm run db:generate",
     "build": "tsc",
     "start": "node dist/src/index.js",
-    "test": "npm run build && node --test dist/test"
+    "test": "npm run build && node --test dist/test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/pg": "^8.21.0",
+    "prisma": "^7.9.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

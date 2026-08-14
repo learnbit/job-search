@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  source      String
+  externalId  String
+  company     String
+  title       String
+  location    String?
+  workplace   String
+  url         String
+  description String?
+  postedAt    DateTime?
+  updatedAt   DateTime?
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@unique([source, externalId])
+}
