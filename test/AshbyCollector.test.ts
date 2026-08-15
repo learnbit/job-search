@@ -110,6 +110,52 @@ test("uses Ashby workplace types with the shared normalizer", async () => {
   );
 });
 
+test("collects listed and legacy postings while excluding unlisted postings", async () => {
+  const errors: string[] = [];
+  const collector = new AshbyCollector(
+    async () =>
+      Response.json({
+        jobs: [
+          {
+            id: "listed-job",
+            title: "Listed Engineer",
+            isListed: true,
+            jobUrl: "https://jobs.ashbyhq.com/example/listed-job",
+          },
+          {
+            id: "unlisted-job",
+            title: "Unlisted Engineer",
+            isListed: false,
+            jobUrl: "https://jobs.ashbyhq.com/example/unlisted-job",
+          },
+          {
+            id: "legacy-job",
+            title: "Legacy Engineer",
+            jobUrl: "https://jobs.ashbyhq.com/example/legacy-job",
+          },
+          {
+            id: "invalid-listed-value",
+            title: "Invalid Engineer",
+            isListed: "false",
+            jobUrl: "https://jobs.ashbyhq.com/example/invalid-listed-value",
+          },
+        ],
+      }),
+    { error: (message: string): void => void errors.push(message) },
+  );
+
+  const jobs = await collector.collect([
+    { jobBoardName: "example", companyName: "Example Company" },
+  ]);
+
+  assert.deepEqual(
+    jobs.map((job) => job.externalId),
+    ["listed-job", "legacy-job"],
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0] ?? "", /Skipped 1 malformed posting/);
+});
+
 test("skips malformed postings without discarding valid postings", async () => {
   const errors: string[] = [];
   const collector = new AshbyCollector(

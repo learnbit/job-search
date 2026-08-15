@@ -6,6 +6,7 @@ export interface AshbyBoard {
 export interface AshbyPosting {
   readonly id: string;
   readonly title: string;
+  readonly isListed?: boolean;
   readonly location?: string | null;
   readonly workplaceType?: string | null;
   readonly jobUrl?: string | null;

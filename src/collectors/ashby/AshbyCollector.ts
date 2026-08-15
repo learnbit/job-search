@@ -55,7 +55,9 @@ export class AshbyCollector implements JobCollector<readonly AshbyBoard[]> {
       );
     }
 
-    return validPostings.map((posting) => this.normalize(posting, board));
+    return validPostings
+      .filter((posting) => posting.isListed !== false)
+      .map((posting) => this.normalize(posting, board));
   }
 
   private normalize(posting: AshbyPosting, board: AshbyBoard): CollectedJob {
@@ -99,6 +101,7 @@ function isAshbyPosting(value: unknown): value is AshbyPosting {
     typeof posting.id === "string" &&
     typeof posting.title === "string" &&
     hasUrl &&
+    isOptionalBoolean(posting.isListed) &&
     isOptionalString(posting.location) &&
     isOptionalString(posting.workplaceType) &&
     isOptionalString(posting.jobUrl) &&
@@ -111,4 +114,8 @@ function isAshbyPosting(value: unknown): value is AshbyPosting {
 
 function isOptionalString(value: unknown): value is string | null | undefined {
   return value === undefined || value === null || typeof value === "string";
+}
+
+function isOptionalBoolean(value: unknown): value is boolean | undefined {
+  return value === undefined || typeof value === "boolean";
 }
