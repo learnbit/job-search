@@ -22,6 +22,8 @@ model Job {
   createdAt   DateTime @default(now())
   lastSeenAt  DateTime @default(now())
   telegramNotifiedAt DateTime?
+  applicationStatus String   @default("not_applied")
+  appliedAt         DateTime?
 
   @@unique([source, externalId])
 }

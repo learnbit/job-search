@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { CollectedJob } from "../src/collectors/types.js";
+import type { ApplicationStatus } from "../src/domain/applicationStatus.js";
 import type { PrismaClient } from "../src/generated/prisma/client.js";
 import {
   classifyJobsByExistingIdentities,
@@ -64,6 +65,170 @@ test("saveMany does nothing for empty input", async () => {
     updatedCount: 0,
     newJobs: [],
   });
+});
+
+test("new persisted jobs rely on the database application defaults", async () => {
+  let createData: Record<string, unknown> | undefined;
+  const prisma = {
+    job: {
+      async findMany(): Promise<never[]> {
+        return [];
+      },
+      async upsert(args: {
+        create: Record<string, unknown>;
+      }): Promise<void> {
+        createData = args.create;
+      },
+    },
+    async $transaction(operations: readonly Promise<unknown>[]): Promise<unknown[]> {
+      return Promise.all(operations);
+    },
+  } as unknown as PrismaClient;
+
+  await new JobRepository(prisma).saveMany([job()]);
+
+  assert.ok(createData);
+  assert.equal(Object.hasOwn(createData, "applicationStatus"), false);
+  assert.equal(Object.hasOwn(createData, "appliedAt"), false);
+});
+
+test("marking a job applied sets appliedAt", async () => {
+  const appliedAt = new Date("2026-08-15T12:00:00.000Z");
+  const context = trackingRepository("not_applied", null, () => appliedAt);
+
+  const result = await context.repository.updateApplicationStatus(
+    identity,
+    "applied",
+  );
+
+  assert.deepEqual(result, { applicationStatus: "applied", appliedAt });
+});
+
+test("moving from applied to interviewing preserves appliedAt", async () => {
+  const appliedAt = new Date("2026-08-14T12:00:00.000Z");
+  const context = trackingRepository("applied", appliedAt, () => {
+    throw new Error("now should not be used");
+  });
+
+  const result = await context.repository.updateApplicationStatus(
+    identity,
+    "interviewing",
+  );
+
+  assert.deepEqual(result, { applicationStatus: "interviewing", appliedAt });
+});
+
+test("moving from interviewing to rejected preserves appliedAt", async () => {
+  const appliedAt = new Date("2026-08-14T12:00:00.000Z");
+  const context = trackingRepository("interviewing", appliedAt, () => {
+    throw new Error("now should not be used");
+  });
+
+  const result = await context.repository.updateApplicationStatus(
+    identity,
+    "rejected",
+  );
+
+  assert.deepEqual(result, { applicationStatus: "rejected", appliedAt });
+});
+
+test("moving to not_applied clears appliedAt", async () => {
+  const context = trackingRepository(
+    "interviewing",
+    new Date("2026-08-14T12:00:00.000Z"),
+  );
+
+  const result = await context.repository.updateApplicationStatus(
+    identity,
+    "not_applied",
+  );
+
+  assert.deepEqual(result, {
+    applicationStatus: "not_applied",
+    appliedAt: null,
+  });
+});
+
+test("reapplying after not_applied creates a new appliedAt", async () => {
+  const firstAppliedAt = new Date("2026-08-14T12:00:00.000Z");
+  const secondAppliedAt = new Date("2026-08-15T12:00:00.000Z");
+  const context = trackingRepository("applied", firstAppliedAt, () =>
+    secondAppliedAt,
+  );
+
+  await context.repository.updateApplicationStatus(identity, "not_applied");
+  const result = await context.repository.updateApplicationStatus(
+    identity,
+    "applied",
+  );
+
+  assert.deepEqual(result, {
+    applicationStatus: "applied",
+    appliedAt: secondAppliedAt,
+  });
+});
+
+test("application tracking can be read by source identity", async () => {
+  const appliedAt = new Date("2026-08-14T12:00:00.000Z");
+  const context = trackingRepository("offer", appliedAt);
+
+  const result = await context.repository.findApplicationTracking(identity);
+
+  assert.deepEqual(result, { applicationStatus: "offer", appliedAt });
+});
+
+test("invalid application statuses cannot be persisted", async () => {
+  let databaseCalled = false;
+  const prisma = {
+    job: {
+      async findUnique(): Promise<null> {
+        databaseCalled = true;
+        return null;
+      },
+    },
+  } as unknown as PrismaClient;
+  const repository = new JobRepository(prisma);
+
+  await assert.rejects(
+    repository.updateApplicationStatus(
+      identity,
+      "withdrawn" as ApplicationStatus,
+    ),
+    /Invalid application status: withdrawn/,
+  );
+  assert.equal(databaseCalled, false);
+});
+
+test("collection upserts preserve application status and appliedAt", async () => {
+  const appliedAt = new Date("2026-08-14T12:00:00.000Z");
+  const persistedJob: Record<string, unknown> = {
+    title: "Original collector title",
+    applicationStatus: "interviewing",
+    appliedAt,
+  };
+  const prisma = {
+    job: {
+      async findMany(): Promise<Array<typeof identity>> {
+        return [identity];
+      },
+      async upsert(args: {
+        update: Record<string, unknown>;
+      }): Promise<void> {
+        Object.assign(persistedJob, args.update);
+      },
+    },
+    async $transaction(operations: readonly Promise<unknown>[]): Promise<unknown[]> {
+      return Promise.all(operations);
+    },
+  } as unknown as PrismaClient;
+
+  await new JobRepository(prisma).saveMany([
+    job({ title: "Updated collector title" }),
+  ]);
+
+  assert.equal(persistedJob.title, "Updated collector title");
+  assert.equal(persistedJob.applicationStatus, "interviewing");
+  assert.equal(persistedJob.appliedAt, appliedAt);
 });
 
 test("classifies one previously unseen job as inserted and new", () => {
@@ -203,4 +368,42 @@ function job(overrides: Partial<CollectedJob> = {}): CollectedJob {
     updatedAt: null,
     ...overrides,
   };
+}
+
+const identity = {
+  source: "greenhouse",
+  externalId: "123",
+} as const;
+
+function trackingRepository(
+  initialStatus: ApplicationStatus,
+  initialAppliedAt: Date | null,
+  now: () => Date = () => new Date("2026-08-15T12:00:00.000Z"),
+): { repository: JobRepository } {
+  const state: {
+    applicationStatus: ApplicationStatus;
+    appliedAt: Date | null;
+  } = {
+    applicationStatus: initialStatus,
+    appliedAt: initialAppliedAt,
+  };
+  const prisma = {
+    job: {
+      async findUnique(): Promise<typeof state> {
+        return { ...state };
+      },
+      async update(args: {
+        data: {
+          applicationStatus: ApplicationStatus;
+          appliedAt: Date | null;
+        };
+      }): Promise<typeof state> {
+        state.applicationStatus = args.data.applicationStatus;
+        state.appliedAt = args.data.appliedAt;
+        return { ...state };
+      },
+    },
+  } as unknown as PrismaClient;
+
+  return { repository: new JobRepository(prisma, now) };
 }

@@ -1,4 +1,8 @@
 import type { CollectedJob } from "../collectors/types.js";
+import {
+  isApplicationStatus,
+  type ApplicationStatus,
+} from "../domain/applicationStatus.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 
 const IDENTITY_QUERY_BATCH_SIZE = 500;
@@ -6,6 +10,11 @@ const IDENTITY_QUERY_BATCH_SIZE = 500;
 export interface JobIdentity {
   readonly source: string;
   readonly externalId: string;
+}
+
+export interface ApplicationTracking {
+  readonly applicationStatus: ApplicationStatus;
+  readonly appliedAt: Date | null;
 }
 
 export interface SaveJobsResult {
@@ -84,7 +93,10 @@ export function classifyJobsByExistingIdentities(
 }
 
 export class JobRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async saveMany(jobs: readonly CollectedJob[]): Promise<SaveJobsResult> {
     if (jobs.length === 0) {
@@ -181,6 +193,62 @@ export class JobRepository {
     });
   }
 
+  async findApplicationTracking(
+    identity: JobIdentity,
+  ): Promise<ApplicationTracking | null> {
+    const job = await this.prisma.job.findUnique({
+      where: {
+        source_externalId: identity,
+      },
+      select: {
+        applicationStatus: true,
+        appliedAt: true,
+      },
+    });
+
+    return job === null ? null : toApplicationTracking(job);
+  }
+
+  async updateApplicationStatus(
+    identity: JobIdentity,
+    status: ApplicationStatus,
+  ): Promise<ApplicationTracking> {
+    if (!isApplicationStatus(status)) {
+      throw new Error(`Invalid application status: ${String(status)}`);
+    }
+
+    const current = await this.prisma.job.findUnique({
+      where: {
+        source_externalId: identity,
+      },
+      select: {
+        appliedAt: true,
+      },
+    });
+
+    if (current === null) {
+      throw new Error(`Job not found: ${identity.source}/${identity.externalId}`);
+    }
+
+    const appliedAt =
+      status === "not_applied" ? null : current.appliedAt ?? this.now();
+    const updated = await this.prisma.job.update({
+      where: {
+        source_externalId: identity,
+      },
+      data: {
+        applicationStatus: status,
+        appliedAt,
+      },
+      select: {
+        applicationStatus: true,
+        appliedAt: true,
+      },
+    });
+
+    return toApplicationTracking(updated);
+  }
+
   private async findExistingIdentities(
     jobs: readonly CollectedJob[],
   ): Promise<JobIdentity[]> {
@@ -207,6 +275,20 @@ export class JobRepository {
 
     return (await Promise.all(queries)).flat();
   }
+}
+
+function toApplicationTracking(job: {
+  applicationStatus: string;
+  appliedAt: Date | null;
+}): ApplicationTracking {
+  if (!isApplicationStatus(job.applicationStatus)) {
+    throw new Error(`Invalid persisted application status: ${job.applicationStatus}`);
+  }
+
+  return {
+    applicationStatus: job.applicationStatus,
+    appliedAt: job.appliedAt,
+  };
 }
 
 function identityKey(identity: JobIdentity): string {
