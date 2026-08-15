@@ -32,6 +32,8 @@ export interface JobPersistenceData {
   updatedAt: Date | null;
 }
 
+export type PersistedCollectedJobData = JobPersistenceData;
+
 export function toJobPersistenceData(job: CollectedJob): JobPersistenceData {
   return {
     source: job.source,
@@ -44,6 +46,21 @@ export function toJobPersistenceData(job: CollectedJob): JobPersistenceData {
     description: job.description,
     postedAt: toOptionalDate(job.postedAt, "postedAt", job),
     updatedAt: toOptionalDate(job.updatedAt, "updatedAt", job),
+  };
+}
+
+export function toCollectedJob(job: PersistedCollectedJobData): CollectedJob {
+  return {
+    source: job.source,
+    externalId: job.externalId,
+    company: job.company,
+    title: job.title,
+    location: job.location,
+    workplace: job.workplace as CollectedJob["workplace"],
+    url: job.url,
+    description: job.description,
+    postedAt: job.postedAt?.toISOString() ?? null,
+    updatedAt: job.updatedAt?.toISOString() ?? null,
   };
 }
 
@@ -120,6 +137,48 @@ export class JobRepository {
       updatedCount: plan.updatedCount,
       newJobs: plan.newJobs,
     };
+  }
+
+  async findTelegramUnnotifiedJobs(): Promise<CollectedJob[]> {
+    const jobs = await this.prisma.job.findMany({
+      where: {
+        telegramNotifiedAt: null,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+      select: {
+        source: true,
+        externalId: true,
+        company: true,
+        title: true,
+        location: true,
+        workplace: true,
+        url: true,
+        description: true,
+        postedAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return jobs.map(toCollectedJob);
+  }
+
+  async markTelegramNotified(
+    identity: JobIdentity,
+    notifiedAt: Date,
+  ): Promise<void> {
+    await this.prisma.job.update({
+      where: {
+        source_externalId: {
+          source: identity.source,
+          externalId: identity.externalId,
+        },
+      },
+      data: {
+        telegramNotifiedAt: notifiedAt,
+      },
+    });
   }
 
   private async findExistingIdentities(

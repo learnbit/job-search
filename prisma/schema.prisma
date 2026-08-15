@@ -21,6 +21,7 @@ model Job {
   updatedAt   DateTime?
   createdAt   DateTime @default(now())
   lastSeenAt  DateTime @default(now())
+  telegramNotifiedAt DateTime?
 
   @@unique([source, externalId])
 }
