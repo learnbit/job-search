@@ -3,6 +3,7 @@ import {
   configureCollector,
   type ConfiguredCollector,
 } from "../collectors/CollectorOrchestrator.js";
+import { AshbyCollector } from "../collectors/ashby/AshbyCollector.js";
 import { GreenhouseCollector } from "../collectors/greenhouse/GreenhouseCollector.js";
 import { LeverCollector } from "../collectors/lever/LeverCollector.js";
 import type { CollectedJob } from "../collectors/types.js";
@@ -10,6 +11,7 @@ import type { PrismaClient } from "../generated/prisma/client.js";
 import { filterJobs, type JobFilters } from "../filters/filterJobs.js";
 import {
   companies,
+  getAshbyBoards,
   getGreenhouseBoards,
   getLeverSites,
 } from "../registry/companies.js";
@@ -73,6 +75,7 @@ export function createCollectionCycleRunner(
 ): CollectionCycleRunner {
   const greenhouseBoards = getGreenhouseBoards(companies);
   const leverSites = getLeverSites(companies);
+  const ashbyBoards = getAshbyBoards(companies);
   const registrations: ConfiguredCollector[] = [];
 
   if (greenhouseBoards.length > 0) {
@@ -83,6 +86,10 @@ export function createCollectionCycleRunner(
 
   if (leverSites.length > 0) {
     registrations.push(configureCollector(new LeverCollector(), leverSites));
+  }
+
+  if (ashbyBoards.length > 0) {
+    registrations.push(configureCollector(new AshbyCollector(), ashbyBoards));
   }
 
   const collector = new CollectorOrchestrator(registrations);

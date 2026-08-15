@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { AshbyBoard } from "../src/collectors/ashby/types.js";
 import type { GreenhouseBoard } from "../src/collectors/greenhouse/types.js";
 import type { LeverSite } from "../src/collectors/lever/types.js";
 import {
   companies,
+  getAshbyBoards,
   getGreenhouseBoards,
   getLeverSites,
   type CompanySource,
@@ -20,9 +22,15 @@ const leverCompany: CompanySource = {
   ats: "lever",
   site: "lever-site",
 };
+const ashbyCompany: CompanySource = {
+  companyName: "Ashby Company",
+  ats: "ashby",
+  jobBoardName: "ashby-board",
+};
 const mixedCompanies: readonly CompanySource[] = [
   greenhouseCompany,
   leverCompany,
+  ashbyCompany,
 ];
 
 test("converts only Greenhouse entries to GreenhouseBoard objects", () => {
@@ -47,8 +55,19 @@ test("converts only Lever entries to LeverSite objects", () => {
   ]);
 });
 
+test("converts only Ashby entries to AshbyBoard objects", () => {
+  const boards: AshbyBoard[] = getAshbyBoards(mixedCompanies);
+
+  assert.deepEqual(boards, [
+    {
+      jobBoardName: "ashby-board",
+      companyName: "Ashby Company",
+    },
+  ]);
+});
+
 test("preserves configured company names and ATS identifiers exactly", () => {
-  assert.equal(companies.length, 11);
+  assert.equal(companies.length, 15);
   assert.deepEqual(getGreenhouseBoards(companies), [
     { boardToken: "canonical", companyName: "Canonical" },
     { boardToken: "gleanwork", companyName: "Glean" },
@@ -64,6 +83,12 @@ test("preserves configured company names and ATS identifiers exactly", () => {
     { site: "xsolla", companyName: "Xsolla" },
     { site: "firstup", companyName: "Firstup" },
   ]);
+  assert.deepEqual(getAshbyBoards(companies), [
+    { jobBoardName: "ashby", companyName: "Ashby" },
+    { jobBoardName: "bem", companyName: "bem" },
+    { jobBoardName: "substrate-bio", companyName: "Substrate Bio" },
+    { jobBoardName: "angi", companyName: "Angi" },
+  ]);
 });
 
 test("configured ATS identifiers are unique within each provider", () => {
@@ -71,15 +96,20 @@ test("configured ATS identifiers are unique within each provider", () => {
     (board) => board.boardToken,
   );
   const leverSites = getLeverSites(companies).map((site) => site.site);
+  const ashbyBoardNames = getAshbyBoards(companies).map(
+    (board) => board.jobBoardName,
+  );
 
   assert.equal(
     new Set(greenhouseBoardTokens).size,
     greenhouseBoardTokens.length,
   );
   assert.equal(new Set(leverSites).size, leverSites.length);
+  assert.equal(new Set(ashbyBoardNames).size, ashbyBoardNames.length);
 });
 
 test("returns empty arrays for empty input", () => {
   assert.deepEqual(getGreenhouseBoards([]), []);
   assert.deepEqual(getLeverSites([]), []);
+  assert.deepEqual(getAshbyBoards([]), []);
 });

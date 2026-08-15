@@ -1,3 +1,4 @@
+import type { AshbyBoard } from "../collectors/ashby/types.js";
 import type { GreenhouseBoard } from "../collectors/greenhouse/types.js";
 import type { LeverSite } from "../collectors/lever/types.js";
 
@@ -11,6 +12,11 @@ export type CompanySource =
       readonly companyName: string;
       readonly ats: "lever";
       readonly site: string;
+    }
+  | {
+      readonly companyName: string;
+      readonly ats: "ashby";
+      readonly jobBoardName: string;
     };
 
 export const companies: readonly CompanySource[] = [
@@ -69,6 +75,26 @@ export const companies: readonly CompanySource[] = [
     ats: "lever",
     site: "firstup",
   },
+  {
+    companyName: "Ashby",
+    ats: "ashby",
+    jobBoardName: "ashby",
+  },
+  {
+    companyName: "bem",
+    ats: "ashby",
+    jobBoardName: "bem",
+  },
+  {
+    companyName: "Substrate Bio",
+    ats: "ashby",
+    jobBoardName: "substrate-bio",
+  },
+  {
+    companyName: "Angi",
+    ats: "ashby",
+    jobBoardName: "angi",
+  },
 ];
 
 export function getGreenhouseBoards(
@@ -87,6 +113,21 @@ export function getLeverSites(
   return sources.flatMap((source) =>
     source.ats === "lever"
       ? [{ site: source.site, companyName: source.companyName }]
+      : [],
+  );
+}
+
+export function getAshbyBoards(
+  sources: readonly CompanySource[],
+): AshbyBoard[] {
+  return sources.flatMap((source) =>
+    source.ats === "ashby"
+      ? [
+          {
+            jobBoardName: source.jobBoardName,
+            companyName: source.companyName,
+          },
+        ]
       : [],
   );
 }
