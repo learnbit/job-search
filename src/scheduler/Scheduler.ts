@@ -125,6 +125,8 @@ export class Scheduler {
   private logResult(result: CollectionCycleResult): void {
     this.logger.log(`Collected jobs: ${result.collectedCount}`);
     this.logger.log(`Persisted jobs: ${result.persistedCount}`);
+    this.logger.log(`New jobs: ${result.insertedCount}`);
+    this.logger.log(`New filtered jobs: ${result.newFilteredJobs.length}`);
     this.logger.log(`Filtered jobs: ${result.filteredJobs.length}`);
   }
 

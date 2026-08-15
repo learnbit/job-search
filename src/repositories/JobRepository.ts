@@ -1,6 +1,24 @@
 import type { CollectedJob } from "../collectors/types.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 
+const IDENTITY_QUERY_BATCH_SIZE = 500;
+
+export interface JobIdentity {
+  readonly source: string;
+  readonly externalId: string;
+}
+
+export interface SaveJobsResult {
+  readonly processedCount: number;
+  readonly insertedCount: number;
+  readonly updatedCount: number;
+  readonly newJobs: readonly CollectedJob[];
+}
+
+export interface JobPersistencePlan extends SaveJobsResult {
+  readonly jobsToPersist: readonly CollectedJob[];
+}
+
 export interface JobPersistenceData {
   source: string;
   externalId: string;
@@ -29,15 +47,42 @@ export function toJobPersistenceData(job: CollectedJob): JobPersistenceData {
   };
 }
 
+export function classifyJobsByExistingIdentities(
+  jobs: readonly CollectedJob[],
+  existingIdentities: readonly JobIdentity[],
+): JobPersistencePlan {
+  const jobsToPersist = uniqueJobsByIdentity(jobs);
+  const existingIdentityKeys = new Set(existingIdentities.map(identityKey));
+  const newJobs = jobsToPersist.filter(
+    (job) => !existingIdentityKeys.has(identityKey(job)),
+  );
+
+  return {
+    processedCount: jobsToPersist.length,
+    insertedCount: newJobs.length,
+    updatedCount: jobsToPersist.length - newJobs.length,
+    newJobs,
+    jobsToPersist,
+  };
+}
+
 export class JobRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async saveMany(jobs: readonly CollectedJob[]): Promise<void> {
+  async saveMany(jobs: readonly CollectedJob[]): Promise<SaveJobsResult> {
     if (jobs.length === 0) {
-      return;
+      return {
+        processedCount: 0,
+        insertedCount: 0,
+        updatedCount: 0,
+        newJobs: [],
+      };
     }
 
-    const persistenceData = jobs.map(toJobPersistenceData);
+    const uniqueJobs = uniqueJobsByIdentity(jobs);
+    const persistenceData = uniqueJobs.map(toJobPersistenceData);
+    const existingIdentities = await this.findExistingIdentities(uniqueJobs);
+    const plan = classifyJobsByExistingIdentities(uniqueJobs, existingIdentities);
     const seenAt = new Date();
 
     await this.prisma.$transaction(
@@ -68,7 +113,57 @@ export class JobRepository {
         }),
       ),
     );
+
+    return {
+      processedCount: plan.processedCount,
+      insertedCount: plan.insertedCount,
+      updatedCount: plan.updatedCount,
+      newJobs: plan.newJobs,
+    };
   }
+
+  private async findExistingIdentities(
+    jobs: readonly CollectedJob[],
+  ): Promise<JobIdentity[]> {
+    const queries: Promise<JobIdentity[]>[] = [];
+
+    for (let index = 0; index < jobs.length; index += IDENTITY_QUERY_BATCH_SIZE) {
+      const batch = jobs.slice(index, index + IDENTITY_QUERY_BATCH_SIZE);
+
+      queries.push(
+        this.prisma.job.findMany({
+          where: {
+            OR: batch.map((job) => ({
+              source: job.source,
+              externalId: job.externalId,
+            })),
+          },
+          select: {
+            source: true,
+            externalId: true,
+          },
+        }),
+      );
+    }
+
+    return (await Promise.all(queries)).flat();
+  }
+}
+
+function identityKey(identity: JobIdentity): string {
+  return JSON.stringify([identity.source, identity.externalId]);
+}
+
+function uniqueJobsByIdentity(
+  jobs: readonly CollectedJob[],
+): CollectedJob[] {
+  const jobsByIdentity = new Map<string, CollectedJob>();
+
+  for (const job of jobs) {
+    jobsByIdentity.set(identityKey(job), job);
+  }
+
+  return [...jobsByIdentity.values()];
 }
 
 function toOptionalDate(

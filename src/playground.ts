@@ -11,6 +11,8 @@ try {
   printCollectionSummary(result.collectedJobs);
 
   console.log(`Persisted jobs: ${result.persistedCount}\n`);
+  console.log(`New jobs: ${result.insertedCount}`);
+  console.log(`New filtered jobs: ${result.newFilteredJobs.length}\n`);
 
   console.log(`Filtered jobs: ${result.filteredJobs.length}\n`);
   console.log(JSON.stringify(result.filteredJobs.map(toReadableJob), null, 2));

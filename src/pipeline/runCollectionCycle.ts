@@ -13,14 +13,17 @@ import {
   getGreenhouseBoards,
   getLeverSites,
 } from "../registry/companies.js";
-import { JobRepository } from "../repositories/JobRepository.js";
+import {
+  JobRepository,
+  type SaveJobsResult,
+} from "../repositories/JobRepository.js";
 
 interface CollectionSource {
   collectAll(): Promise<CollectedJob[]>;
 }
 
 interface JobPersistence {
-  saveMany(jobs: readonly CollectedJob[]): Promise<void>;
+  saveMany(jobs: readonly CollectedJob[]): Promise<SaveJobsResult>;
 }
 
 export interface CollectionCycleDependencies {
@@ -32,8 +35,12 @@ export interface CollectionCycleDependencies {
 export interface CollectionCycleResult {
   readonly collectedCount: number;
   readonly persistedCount: number;
+  readonly insertedCount: number;
+  readonly updatedCount: number;
   readonly collectedJobs: readonly CollectedJob[];
+  readonly newJobs: readonly CollectedJob[];
   readonly filteredJobs: readonly CollectedJob[];
+  readonly newFilteredJobs: readonly CollectedJob[];
 }
 
 export type CollectionCycleRunner = () => Promise<CollectionCycleResult>;
@@ -43,15 +50,20 @@ export async function runCollectionCycle(
 ): Promise<CollectionCycleResult> {
   const collectedJobs = await dependencies.collector.collectAll();
 
-  await dependencies.jobRepository.saveMany(collectedJobs);
+  const saveResult = await dependencies.jobRepository.saveMany(collectedJobs);
 
   const filteredJobs = filterJobs(collectedJobs, dependencies.filters);
+  const newFilteredJobs = filterJobs(saveResult.newJobs, dependencies.filters);
 
   return {
     collectedCount: collectedJobs.length,
-    persistedCount: collectedJobs.length,
+    persistedCount: saveResult.processedCount,
+    insertedCount: saveResult.insertedCount,
+    updatedCount: saveResult.updatedCount,
     collectedJobs,
+    newJobs: saveResult.newJobs,
     filteredJobs,
+    newFilteredJobs,
   };
 }
 

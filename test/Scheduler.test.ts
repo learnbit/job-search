@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { CollectedJob } from "../src/collectors/types.js";
 import type { CollectionCycleResult } from "../src/pipeline/runCollectionCycle.js";
 import {
   DEFAULT_COLLECTION_INTERVAL_MINUTES,
@@ -182,10 +183,37 @@ test("shutdown during a cycle prevents another cycle from starting", async () =>
   assert.equal(sleepCalls, 0);
 });
 
+test("logs new and new-filtered job counts", async () => {
+  const logs: string[] = [];
+  let scheduler: Scheduler;
+
+  scheduler = createScheduler({
+    async runCollectionCycle() {
+      scheduler.requestShutdown();
+      return result({
+        collectedCount: 4,
+        persistedCount: 4,
+        insertedCount: 2,
+        updatedCount: 2,
+        newJobs: [job("new-relevant"), job("new-irrelevant")],
+        newFilteredJobs: [job("new-relevant")],
+      });
+    },
+    async sleep() {},
+    logs,
+  });
+
+  await scheduler.run();
+
+  assert.ok(logs.includes("New jobs: 2"));
+  assert.ok(logs.includes("New filtered jobs: 1"));
+});
+
 interface SchedulerTestOptions {
   runCollectionCycle: () => Promise<CollectionCycleResult>;
   sleep: (milliseconds: number, signal: AbortSignal) => Promise<void>;
   errors?: string[];
+  logs?: string[];
 }
 
 function createScheduler(options: SchedulerTestOptions): Scheduler {
@@ -194,7 +222,9 @@ function createScheduler(options: SchedulerTestOptions): Scheduler {
     runCollectionCycle: options.runCollectionCycle,
     sleep: options.sleep,
     logger: {
-      log() {},
+      log(message) {
+        options.logs?.push(String(message));
+      },
       error(message) {
         options.errors?.push(String(message));
       },
@@ -202,12 +232,34 @@ function createScheduler(options: SchedulerTestOptions): Scheduler {
   });
 }
 
-function result(): CollectionCycleResult {
+function result(
+  overrides: Partial<CollectionCycleResult> = {},
+): CollectionCycleResult {
   return {
     collectedCount: 0,
     persistedCount: 0,
+    insertedCount: 0,
+    updatedCount: 0,
     collectedJobs: [],
+    newJobs: [],
     filteredJobs: [],
+    newFilteredJobs: [],
+    ...overrides,
+  };
+}
+
+function job(externalId: string): CollectedJob {
+  return {
+    source: "greenhouse",
+    externalId,
+    company: "Example Company",
+    title: "Example Job",
+    location: null,
+    workplace: "unknown",
+    url: `https://example.com/jobs/${externalId}`,
+    description: null,
+    postedAt: null,
+    updatedAt: null,
   };
 }
 
