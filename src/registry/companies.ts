@@ -25,6 +25,31 @@ export const companies: readonly CompanySource[] = [
     boardToken: "gleanwork",
   },
   {
+    companyName: "Trivelta",
+    ats: "greenhouse",
+    boardToken: "trivelta",
+  },
+  {
+    companyName: "Moniepoint",
+    ats: "greenhouse",
+    boardToken: "moniepoint",
+  },
+  {
+    companyName: "Nomina",
+    ats: "greenhouse",
+    boardToken: "nomina",
+  },
+  {
+    companyName: "Startale Group",
+    ats: "greenhouse",
+    boardToken: "startale",
+  },
+  {
+    companyName: "Tech Holding",
+    ats: "greenhouse",
+    boardToken: "techholding",
+  },
+  {
     companyName: "Relay",
     ats: "lever",
     site: "relay",

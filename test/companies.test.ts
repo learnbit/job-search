@@ -48,9 +48,15 @@ test("converts only Lever entries to LeverSite objects", () => {
 });
 
 test("preserves configured company names and ATS identifiers exactly", () => {
+  assert.equal(companies.length, 11);
   assert.deepEqual(getGreenhouseBoards(companies), [
     { boardToken: "canonical", companyName: "Canonical" },
     { boardToken: "gleanwork", companyName: "Glean" },
+    { boardToken: "trivelta", companyName: "Trivelta" },
+    { boardToken: "moniepoint", companyName: "Moniepoint" },
+    { boardToken: "nomina", companyName: "Nomina" },
+    { boardToken: "startale", companyName: "Startale Group" },
+    { boardToken: "techholding", companyName: "Tech Holding" },
   ]);
   assert.deepEqual(getLeverSites(companies), [
     { site: "relay", companyName: "Relay" },
@@ -58,6 +64,19 @@ test("preserves configured company names and ATS identifiers exactly", () => {
     { site: "xsolla", companyName: "Xsolla" },
     { site: "firstup", companyName: "Firstup" },
   ]);
+});
+
+test("configured ATS identifiers are unique within each provider", () => {
+  const greenhouseBoardTokens = getGreenhouseBoards(companies).map(
+    (board) => board.boardToken,
+  );
+  const leverSites = getLeverSites(companies).map((site) => site.site);
+
+  assert.equal(
+    new Set(greenhouseBoardTokens).size,
+    greenhouseBoardTokens.length,
+  );
+  assert.equal(new Set(leverSites).size, leverSites.length);
 });
 
 test("returns empty arrays for empty input", () => {
