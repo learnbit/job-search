@@ -1,0 +1,37 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #1f2937;
+  background: #f8fafc;
+}
+
+header,
+main {
+  width: min(100% - 2rem, 48rem);
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 1.5rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+}
+
+main {
+  padding-block: 3rem;
+}
+
+a {
+  color: inherit;
+}
