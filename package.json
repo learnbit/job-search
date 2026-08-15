@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "playground": "tsx src/playground.ts",
+    "scheduler": "tsx src/runScheduler.ts",
     "prebuild": "npm run db:generate",
     "build": "tsc",
     "start": "node dist/src/index.js",

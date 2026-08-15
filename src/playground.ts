@@ -1,59 +1,19 @@
-import {
-  CollectorOrchestrator,
-  configureCollector,
-  type ConfiguredCollector,
-} from "./collectors/CollectorOrchestrator.js";
-import { GreenhouseCollector } from "./collectors/greenhouse/GreenhouseCollector.js";
-import { LeverCollector } from "./collectors/lever/LeverCollector.js";
 import type { CollectedJob } from "./collectors/types.js";
+import { jobFilters } from "./config/jobFilters.js";
 import { prisma } from "./db/prisma.js";
-import { filterJobs, type JobFilters } from "./filters/filterJobs.js";
-import {
-  companies,
-  getGreenhouseBoards,
-  getLeverSites,
-} from "./registry/companies.js";
-import { JobRepository } from "./repositories/JobRepository.js";
+import { createCollectionCycleRunner } from "./pipeline/runCollectionCycle.js";
 
-const greenhouseBoards = getGreenhouseBoards(companies);
-const leverSites = getLeverSites(companies);
-
-// Edit these filters for each manual run.
-const filters: JobFilters = {
-  titleKeywords: ["frontend", "front-end", "web developer", "web frontend"],
-  skills: ["react", "typescript"],
-  workplaces: ["remote", "unknown"],
-};
-
-const registrations: ConfiguredCollector[] = [];
-
-if (greenhouseBoards.length > 0) {
-  registrations.push(
-    configureCollector(new GreenhouseCollector(), greenhouseBoards),
-  );
-}
-
-if (leverSites.length > 0) {
-  registrations.push(
-    configureCollector(new LeverCollector(), leverSites),
-  );
-}
-
-const orchestrator = new CollectorOrchestrator(registrations);
-const jobRepository = new JobRepository(prisma);
+const runCollectionCycle = createCollectionCycleRunner(prisma, jobFilters);
 
 try {
-  const collectedJobs = await orchestrator.collectAll();
+  const result = await runCollectionCycle();
 
-  printCollectionSummary(collectedJobs);
+  printCollectionSummary(result.collectedJobs);
 
-  await jobRepository.saveMany(collectedJobs);
-  console.log(`Persisted jobs: ${collectedJobs.length}\n`);
+  console.log(`Persisted jobs: ${result.persistedCount}\n`);
 
-  const filteredJobs = filterJobs(collectedJobs, filters);
-
-  console.log(`Filtered jobs: ${filteredJobs.length}\n`);
-  console.log(JSON.stringify(filteredJobs.map(toReadableJob), null, 2));
+  console.log(`Filtered jobs: ${result.filteredJobs.length}\n`);
+  console.log(JSON.stringify(result.filteredJobs.map(toReadableJob), null, 2));
 } finally {
   await prisma.$disconnect();
 }

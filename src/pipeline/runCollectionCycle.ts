@@ -1,0 +1,80 @@
+import {
+  CollectorOrchestrator,
+  configureCollector,
+  type ConfiguredCollector,
+} from "../collectors/CollectorOrchestrator.js";
+import { GreenhouseCollector } from "../collectors/greenhouse/GreenhouseCollector.js";
+import { LeverCollector } from "../collectors/lever/LeverCollector.js";
+import type { CollectedJob } from "../collectors/types.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
+import { filterJobs, type JobFilters } from "../filters/filterJobs.js";
+import {
+  companies,
+  getGreenhouseBoards,
+  getLeverSites,
+} from "../registry/companies.js";
+import { JobRepository } from "../repositories/JobRepository.js";
+
+interface CollectionSource {
+  collectAll(): Promise<CollectedJob[]>;
+}
+
+interface JobPersistence {
+  saveMany(jobs: readonly CollectedJob[]): Promise<void>;
+}
+
+export interface CollectionCycleDependencies {
+  readonly collector: CollectionSource;
+  readonly jobRepository: JobPersistence;
+  readonly filters: JobFilters;
+}
+
+export interface CollectionCycleResult {
+  readonly collectedCount: number;
+  readonly persistedCount: number;
+  readonly collectedJobs: readonly CollectedJob[];
+  readonly filteredJobs: readonly CollectedJob[];
+}
+
+export type CollectionCycleRunner = () => Promise<CollectionCycleResult>;
+
+export async function runCollectionCycle(
+  dependencies: CollectionCycleDependencies,
+): Promise<CollectionCycleResult> {
+  const collectedJobs = await dependencies.collector.collectAll();
+
+  await dependencies.jobRepository.saveMany(collectedJobs);
+
+  const filteredJobs = filterJobs(collectedJobs, dependencies.filters);
+
+  return {
+    collectedCount: collectedJobs.length,
+    persistedCount: collectedJobs.length,
+    collectedJobs,
+    filteredJobs,
+  };
+}
+
+export function createCollectionCycleRunner(
+  prisma: PrismaClient,
+  filters: JobFilters,
+): CollectionCycleRunner {
+  const greenhouseBoards = getGreenhouseBoards(companies);
+  const leverSites = getLeverSites(companies);
+  const registrations: ConfiguredCollector[] = [];
+
+  if (greenhouseBoards.length > 0) {
+    registrations.push(
+      configureCollector(new GreenhouseCollector(), greenhouseBoards),
+    );
+  }
+
+  if (leverSites.length > 0) {
+    registrations.push(configureCollector(new LeverCollector(), leverSites));
+  }
+
+  const collector = new CollectorOrchestrator(registrations);
+  const jobRepository = new JobRepository(prisma);
+
+  return () => runCollectionCycle({ collector, jobRepository, filters });
+}
