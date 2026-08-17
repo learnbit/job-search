@@ -8,12 +8,12 @@
     "node": "^20.19 || ^22.12 || >=24.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "dev:backend": "tsx src/index.ts",
     "playground": "tsx src/playground.ts",
     "scheduler": "tsx src/runScheduler.ts",
     "prebuild": "npm run db:generate",
-    "build": "npm run build:backend && next build",
+    "build": "npm run build:backend && next build --webpack",
     "build:backend": "tsc -p tsconfig.backend.json",
     "start": "next start",
     "start:backend": "node dist/src/index.js",

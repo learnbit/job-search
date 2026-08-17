@@ -35,3 +35,65 @@ main {
 a {
   color: inherit;
 }
+
+.jobs-page h1 {
+  margin-bottom: 0.25rem;
+}
+
+.jobs-summary {
+  margin-top: 0;
+  color: #64748b;
+}
+
+.jobs-list {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.job-card {
+  padding: 1.25rem;
+  border: 1px solid #dbe3ec;
+  border-radius: 0.5rem;
+  background: #ffffff;
+}
+
+.job-card-header {
+  width: auto;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.job-card-header h2,
+.job-card-header p {
+  margin: 0;
+}
+
+.job-card-header h2 {
+  margin-bottom: 0.25rem;
+  font-size: 1.25rem;
+}
+
+.job-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin-block: 0 1.25rem;
+}
+
+.job-details dt {
+  margin-bottom: 0.2rem;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.job-details dd {
+  margin: 0;
+}
+
+.job-link {
+  font-weight: 600;
+}

@@ -12,6 +12,14 @@ if (!connectionString) {
   );
 }
 
-const adapter = new PrismaPg({ connectionString });
+const globalForPrisma = globalThis as typeof globalThis & {
+  jobSearchPrisma?: PrismaClient;
+};
 
-export const prisma = new PrismaClient({ adapter });
+export const prisma =
+  globalForPrisma.jobSearchPrisma ??
+  new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.jobSearchPrisma = prisma;
+}

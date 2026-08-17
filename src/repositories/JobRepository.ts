@@ -3,9 +3,11 @@ import {
   isApplicationStatus,
   type ApplicationStatus,
 } from "../domain/applicationStatus.js";
+import { filterJobs, type JobFilters } from "../filters/filterJobs.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 
 const IDENTITY_QUERY_BATCH_SIZE = 500;
+const JOB_LIST_QUERY_BATCH_SIZE = 250;
 
 export interface JobIdentity {
   readonly source: string;
@@ -15,6 +17,17 @@ export interface JobIdentity {
 export interface ApplicationTracking {
   readonly applicationStatus: ApplicationStatus;
   readonly appliedAt: Date | null;
+}
+
+export interface JobListItem extends JobIdentity, ApplicationTracking {
+  readonly company: string;
+  readonly title: string;
+  readonly location: string | null;
+  readonly workplace: string;
+  readonly url: string;
+  readonly postedAt: Date | null;
+  readonly createdAt: Date;
+  readonly lastSeenAt: Date;
 }
 
 export interface SaveJobsResult {
@@ -176,6 +189,70 @@ export class JobRepository {
     return jobs.map(toCollectedJob);
   }
 
+  async findJobsForList(
+    filters: JobFilters,
+    limit = 100,
+  ): Promise<JobListItem[]> {
+    if (!Number.isInteger(limit) || limit <= 0) {
+      throw new Error("Job list limit must be a positive integer");
+    }
+
+    const matchingJobs: JobListItem[] = [];
+    let skip = 0;
+
+    while (matchingJobs.length < limit) {
+      const jobs = await this.prisma.job.findMany({
+        orderBy: [
+          { postedAt: { sort: "desc", nulls: "last" } },
+          { createdAt: "desc" },
+          { source: "asc" },
+          { externalId: "asc" },
+        ],
+        skip,
+        take: JOB_LIST_QUERY_BATCH_SIZE,
+        select: {
+          source: true,
+          externalId: true,
+          company: true,
+          title: true,
+          location: true,
+          workplace: true,
+          url: true,
+          description: true,
+          postedAt: true,
+          updatedAt: true,
+          createdAt: true,
+          lastSeenAt: true,
+          applicationStatus: true,
+          appliedAt: true,
+        },
+      });
+
+      const collectedJobs = jobs.map(toCollectedJob);
+      const matchingIdentities = new Set(
+        filterJobs(collectedJobs, filters).map(identityKey),
+      );
+
+      for (const job of jobs) {
+        if (matchingIdentities.has(identityKey(job))) {
+          matchingJobs.push(toJobListItem(job));
+
+          if (matchingJobs.length === limit) {
+            break;
+          }
+        }
+      }
+
+      if (jobs.length < JOB_LIST_QUERY_BATCH_SIZE) {
+        break;
+      }
+
+      skip += jobs.length;
+    }
+
+    return matchingJobs;
+  }
+
   async markTelegramNotified(
     identity: JobIdentity,
     notifiedAt: Date,
@@ -288,6 +365,29 @@ function toApplicationTracking(job: {
   return {
     applicationStatus: job.applicationStatus,
     appliedAt: job.appliedAt,
+  };
+}
+
+function toJobListItem(
+  job: PersistedCollectedJobData & {
+    createdAt: Date;
+    lastSeenAt: Date;
+    applicationStatus: string;
+    appliedAt: Date | null;
+  },
+): JobListItem {
+  return {
+    source: job.source,
+    externalId: job.externalId,
+    company: job.company,
+    title: job.title,
+    location: job.location,
+    workplace: job.workplace,
+    url: job.url,
+    postedAt: job.postedAt,
+    createdAt: job.createdAt,
+    lastSeenAt: job.lastSeenAt,
+    ...toApplicationTracking(job),
   };
 }
 
