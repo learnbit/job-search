@@ -165,6 +165,55 @@ a {
   cursor: pointer;
 }
 
+.job-tracking-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.tracking-saving-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+  cursor: wait;
+}
+
+.tracking-saving-panel {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  min-width: 12rem;
+  padding: 1.5rem 2rem;
+  border: 1px solid #dbe3ec;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.2);
+  text-align: center;
+}
+
+.tracking-saving-panel > span:last-child {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.tracking-saving-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0.2rem solid #cbd5e1;
+  border-top-color: #475569;
+  border-radius: 50%;
+  animation: tracking-spin 0.8s linear infinite;
+}
+
+@keyframes tracking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .job-link {
   font-weight: 600;
 }
