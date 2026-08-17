@@ -2,18 +2,15 @@ import { jobFilters } from "../../src/config/jobFilters";
 import { prisma } from "../../src/db/prisma";
 import type { ApplicationStatus } from "../../src/domain/applicationStatus";
 import {
+  formatDiscoveredDate,
+  formatPostedDate,
+} from "../../src/domain/jobRecency";
+import {
   JobRepository,
   type JobListItem,
 } from "../../src/repositories/JobRepository";
 
 export const dynamic = "force-dynamic";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 const applicationStatusLabels: Record<ApplicationStatus, string> = {
   not_applied: "Not applied",
@@ -26,6 +23,7 @@ const applicationStatusLabels: Record<ApplicationStatus, string> = {
 export default async function JobsPage() {
   const repository = new JobRepository(prisma);
   const jobs = await repository.findJobsForList(jobFilters);
+  const now = new Date();
 
   return (
     <section className="jobs-page">
@@ -40,7 +38,7 @@ export default async function JobsPage() {
         <ul className="jobs-list">
           {jobs.map((job) => (
             <li key={`${job.source}:${job.externalId}`}>
-              <JobCard job={job} />
+              <JobCard job={job} now={now} />
             </li>
           ))}
         </ul>
@@ -49,13 +47,28 @@ export default async function JobsPage() {
   );
 }
 
-function JobCard({ job }: { job: JobListItem }) {
+function JobCard({ job, now }: { job: JobListItem; now: Date }) {
+  const discoveredLabel = formatDiscoveredDate(job.createdAt, now);
+
   return (
     <article className="job-card">
       <header className="job-card-header">
         <h2>{job.title}</h2>
         <p>{job.company}</p>
       </header>
+
+      <div className="job-recency">
+        {job.postedAt === null ? (
+          <p className="job-recency-primary">{discoveredLabel}</p>
+        ) : (
+          <>
+            <p className="job-recency-primary">
+              {formatPostedDate(job.postedAt, now)}
+            </p>
+            <p className="job-recency-secondary">{discoveredLabel}</p>
+          </>
+        )}
+      </div>
 
       <dl className="job-details">
         <div>
@@ -74,13 +87,13 @@ function JobCard({ job }: { job: JobListItem }) {
           <dt>Status</dt>
           <dd>{applicationStatusLabels[job.applicationStatus]}</dd>
         </div>
-        {job.postedAt === null ? null : (
-          <div>
-            <dt>Posted</dt>
-            <dd>{dateFormatter.format(job.postedAt)}</dd>
-          </div>
-        )}
       </dl>
+
+      {job.postedAt === null ? (
+        <p className="job-posted-unavailable">
+          {formatPostedDate(job.postedAt, now)}
+        </p>
+      ) : null}
 
       <a
         className="job-link"

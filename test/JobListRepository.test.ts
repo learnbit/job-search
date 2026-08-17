@@ -7,24 +7,57 @@ import {
   type PersistedCollectedJobData,
 } from "../src/repositories/JobRepository.js";
 
-test("requests jobs in deterministic newest-first order", async () => {
+test("orders jobs with postedAt newest first", async () => {
   const context = repositoryWithRows([
-    persistedJob({ externalId: "posted", postedAt: new Date("2026-08-15") }),
-    persistedJob({ externalId: "fallback", postedAt: null }),
+    persistedJob({ externalId: "newer", postedAt: new Date("2026-08-16") }),
+    persistedJob({ externalId: "older", postedAt: new Date("2026-08-15") }),
   ]);
 
-  const jobs = await context.repository.findJobsForList({});
+  await context.repository.findJobsForList({});
 
-  assert.deepEqual(context.queries[0]?.orderBy, [
+  assert.deepEqual(
+    (context.queries[0]?.orderBy as readonly unknown[])[0],
     { postedAt: { sort: "desc", nulls: "last" } },
+  );
+});
+
+test("orders jobs with real postedAt before jobs with missing postedAt", async () => {
+  const context = repositoryWithRows([
+    persistedJob({ externalId: "posted", postedAt: new Date("2026-08-15") }),
+    persistedJob({ externalId: "unknown", postedAt: null }),
+  ]);
+
+  await context.repository.findJobsForList({});
+
+  assert.deepEqual(
+    (context.queries[0]?.orderBy as readonly unknown[])[0],
+    { postedAt: { sort: "desc", nulls: "last" } },
+  );
+});
+
+test("orders jobs without postedAt by createdAt descending", async () => {
+  const context = repositoryWithRows([
+    persistedJob({ externalId: "newer", createdAt: new Date("2026-08-16") }),
+    persistedJob({ externalId: "older", createdAt: new Date("2026-08-15") }),
+  ]);
+
+  await context.repository.findJobsForList({});
+
+  assert.deepEqual(
+    (context.queries[0]?.orderBy as readonly unknown[])[1],
     { createdAt: "desc" },
+  );
+});
+
+test("uses source and externalId as deterministic ordering tie-breakers", async () => {
+  const context = repositoryWithRows([persistedJob()]);
+
+  await context.repository.findJobsForList({});
+
+  assert.deepEqual((context.queries[0]?.orderBy as readonly unknown[]).slice(2), [
     { source: "asc" },
     { externalId: "asc" },
   ]);
-  assert.deepEqual(
-    jobs.map((job) => job.externalId),
-    ["posted", "fallback"],
-  );
 });
 
 test("includes application tracking fields in list items", async () => {

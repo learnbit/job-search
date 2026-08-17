@@ -61,7 +61,7 @@ a {
 
 .job-card-header {
   width: auto;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   padding: 0;
 }
 
@@ -73,6 +73,28 @@ a {
 .job-card-header h2 {
   margin-bottom: 0.25rem;
   font-size: 1.25rem;
+}
+
+.job-recency {
+  margin-bottom: 1.25rem;
+}
+
+.job-recency p {
+  margin: 0;
+}
+
+.job-recency-primary {
+  font-weight: 600;
+}
+
+.job-recency-secondary,
+.job-posted-unavailable {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.job-recency p + p {
+  margin-top: 0.2rem;
 }
 
 .job-details {
@@ -92,6 +114,10 @@ a {
 
 .job-details dd {
   margin: 0;
+}
+
+.job-posted-unavailable {
+  margin-block: -0.5rem 1rem;
 }
 
 .job-link {
