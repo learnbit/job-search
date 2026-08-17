@@ -20,3 +20,14 @@ test("Job application tracking fields have safe defaults", async () => {
   );
   assert.match(migration, /"appliedAt" TIMESTAMP\(3\)/);
 });
+
+test("Job notes are nullable and added by a focused migration", async () => {
+  const schema = await readFile("prisma/schema.prisma", "utf8");
+  const migration = await readFile(
+    "prisma/migrations/20260817163921_add_job_notes/migration.sql",
+    "utf8",
+  );
+
+  assert.match(schema, /notes\s+String\?/);
+  assert.match(migration, /ADD COLUMN\s+"notes" TEXT/);
+});

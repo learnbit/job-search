@@ -9,6 +9,7 @@ import {
   JobRepository,
   type JobListItem,
 } from "../../src/repositories/JobRepository";
+import { saveJobTracking } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -83,10 +84,6 @@ function JobCard({ job, now }: { job: JobListItem; now: Date }) {
           <dt>Source</dt>
           <dd>{formatLabel(job.source)}</dd>
         </div>
-        <div>
-          <dt>Status</dt>
-          <dd>{applicationStatusLabels[job.applicationStatus]}</dd>
-        </div>
       </dl>
 
       {job.postedAt === null ? (
@@ -94,6 +91,32 @@ function JobCard({ job, now }: { job: JobListItem; now: Date }) {
           {formatPostedDate(job.postedAt, now)}
         </p>
       ) : null}
+
+      <form action={saveJobTracking} className="job-tracking-form">
+        <input type="hidden" name="source" value={job.source} />
+        <input type="hidden" name="externalId" value={job.externalId} />
+
+        <label>
+          <span>Status</span>
+          <select
+            name="applicationStatus"
+            defaultValue={job.applicationStatus}
+          >
+            {Object.entries(applicationStatusLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          <span>Notes</span>
+          <textarea name="notes" rows={4} defaultValue={job.notes ?? ""} />
+        </label>
+
+        <button type="submit">Save tracking</button>
+      </form>
 
       <a
         className="job-link"

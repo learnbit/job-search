@@ -17,6 +17,7 @@ export interface JobIdentity {
 export interface ApplicationTracking {
   readonly applicationStatus: ApplicationStatus;
   readonly appliedAt: Date | null;
+  readonly notes: string | null;
 }
 
 export interface JobListItem extends JobIdentity, ApplicationTracking {
@@ -225,6 +226,7 @@ export class JobRepository {
           lastSeenAt: true,
           applicationStatus: true,
           appliedAt: true,
+          notes: true,
         },
       });
 
@@ -280,6 +282,7 @@ export class JobRepository {
       select: {
         applicationStatus: true,
         appliedAt: true,
+        notes: true,
       },
     });
 
@@ -289,6 +292,45 @@ export class JobRepository {
   async updateApplicationStatus(
     identity: JobIdentity,
     status: ApplicationStatus,
+  ): Promise<ApplicationTracking> {
+    return this.updateApplicationTrackingRecord(identity, status);
+  }
+
+  async updateApplicationNotes(
+    identity: JobIdentity,
+    notes: string,
+  ): Promise<ApplicationTracking> {
+    const updated = await this.prisma.job.update({
+      where: {
+        source_externalId: identity,
+      },
+      data: {
+        notes: normalizeApplicationNotes(notes),
+      },
+      select: {
+        applicationStatus: true,
+        appliedAt: true,
+        notes: true,
+      },
+    });
+
+    return toApplicationTracking(updated);
+  }
+
+  async updateApplicationTracking(
+    identity: JobIdentity,
+    status: ApplicationStatus,
+    notes: string,
+  ): Promise<ApplicationTracking> {
+    return this.updateApplicationTrackingRecord(identity, status, {
+      notes: normalizeApplicationNotes(notes),
+    });
+  }
+
+  private async updateApplicationTrackingRecord(
+    identity: JobIdentity,
+    status: ApplicationStatus,
+    notesUpdate?: { readonly notes: string | null },
   ): Promise<ApplicationTracking> {
     if (!isApplicationStatus(status)) {
       throw new Error(`Invalid application status: ${String(status)}`);
@@ -316,10 +358,12 @@ export class JobRepository {
       data: {
         applicationStatus: status,
         appliedAt,
+        ...notesUpdate,
       },
       select: {
         applicationStatus: true,
         appliedAt: true,
+        notes: true,
       },
     });
 
@@ -357,6 +401,7 @@ export class JobRepository {
 function toApplicationTracking(job: {
   applicationStatus: string;
   appliedAt: Date | null;
+  notes: string | null;
 }): ApplicationTracking {
   if (!isApplicationStatus(job.applicationStatus)) {
     throw new Error(`Invalid persisted application status: ${job.applicationStatus}`);
@@ -365,6 +410,7 @@ function toApplicationTracking(job: {
   return {
     applicationStatus: job.applicationStatus,
     appliedAt: job.appliedAt,
+    notes: job.notes,
   };
 }
 
@@ -374,6 +420,7 @@ function toJobListItem(
     lastSeenAt: Date;
     applicationStatus: string;
     appliedAt: Date | null;
+    notes: string | null;
   },
 ): JobListItem {
   return {
@@ -389,6 +436,12 @@ function toJobListItem(
     lastSeenAt: job.lastSeenAt,
     ...toApplicationTracking(job),
   };
+}
+
+function normalizeApplicationNotes(notes: string): string | null {
+  const trimmedNotes = notes.trim();
+
+  return trimmedNotes.length === 0 ? null : trimmedNotes;
 }
 
 function identityKey(identity: JobIdentity): string {

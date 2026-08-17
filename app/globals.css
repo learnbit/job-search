@@ -120,6 +120,51 @@ a {
   margin-block: -0.5rem 1rem;
 }
 
+.job-tracking-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.job-tracking-form label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.job-tracking-form label > span {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.job-tracking-form select,
+.job-tracking-form textarea {
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.3rem;
+  color: inherit;
+  background: #ffffff;
+  font: inherit;
+}
+
+.job-tracking-form textarea {
+  resize: vertical;
+}
+
+.job-tracking-form button {
+  justify-self: start;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.3rem;
+  color: inherit;
+  background: #f8fafc;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .job-link {
   font-weight: 600;
 }

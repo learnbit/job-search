@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { CollectedJob } from "../src/collectors/types.js";
-import type { ApplicationStatus } from "../src/domain/applicationStatus.js";
+import {
+  parseApplicationStatus,
+  type ApplicationStatus,
+} from "../src/domain/applicationStatus.js";
 import type { PrismaClient } from "../src/generated/prisma/client.js";
 import {
   classifyJobsByExistingIdentities,
@@ -101,7 +104,11 @@ test("marking a job applied sets appliedAt", async () => {
     "applied",
   );
 
-  assert.deepEqual(result, { applicationStatus: "applied", appliedAt });
+  assert.deepEqual(result, {
+    applicationStatus: "applied",
+    appliedAt,
+    notes: null,
+  });
 });
 
 test("moving from applied to interviewing preserves appliedAt", async () => {
@@ -115,7 +122,11 @@ test("moving from applied to interviewing preserves appliedAt", async () => {
     "interviewing",
   );
 
-  assert.deepEqual(result, { applicationStatus: "interviewing", appliedAt });
+  assert.deepEqual(result, {
+    applicationStatus: "interviewing",
+    appliedAt,
+    notes: null,
+  });
 });
 
 test("moving from interviewing to rejected preserves appliedAt", async () => {
@@ -129,7 +140,11 @@ test("moving from interviewing to rejected preserves appliedAt", async () => {
     "rejected",
   );
 
-  assert.deepEqual(result, { applicationStatus: "rejected", appliedAt });
+  assert.deepEqual(result, {
+    applicationStatus: "rejected",
+    appliedAt,
+    notes: null,
+  });
 });
 
 test("moving to not_applied clears appliedAt", async () => {
@@ -146,6 +161,7 @@ test("moving to not_applied clears appliedAt", async () => {
   assert.deepEqual(result, {
     applicationStatus: "not_applied",
     appliedAt: null,
+    notes: null,
   });
 });
 
@@ -165,16 +181,104 @@ test("reapplying after not_applied creates a new appliedAt", async () => {
   assert.deepEqual(result, {
     applicationStatus: "applied",
     appliedAt: secondAppliedAt,
+    notes: null,
   });
 });
 
 test("application tracking can be read by source identity", async () => {
   const appliedAt = new Date("2026-08-14T12:00:00.000Z");
-  const context = trackingRepository("offer", appliedAt);
+  const context = trackingRepository(
+    "offer",
+    appliedAt,
+    undefined,
+    "Offer expires Friday.",
+  );
 
   const result = await context.repository.findApplicationTracking(identity);
 
-  assert.deepEqual(result, { applicationStatus: "offer", appliedAt });
+  assert.deepEqual(result, {
+    applicationStatus: "offer",
+    appliedAt,
+    notes: "Offer expires Friday.",
+  });
+});
+
+test("updating notes persists trimmed text without resetting status", async () => {
+  const appliedAt = new Date("2026-08-14T12:00:00.000Z");
+  const context = trackingRepository("interviewing", appliedAt);
+
+  const result = await context.repository.updateApplicationNotes(
+    identity,
+    "  Follow up next Tuesday.\n  ",
+  );
+
+  assert.deepEqual(result, {
+    applicationStatus: "interviewing",
+    appliedAt,
+    notes: "Follow up next Tuesday.",
+  });
+});
+
+test("empty application notes persist as null", async () => {
+  const context = trackingRepository(
+    "not_applied",
+    null,
+    undefined,
+    "Existing note",
+  );
+
+  const result = await context.repository.updateApplicationNotes(
+    identity,
+    "  \n  ",
+  );
+
+  assert.equal(result.notes, null);
+  assert.equal(result.applicationStatus, "not_applied");
+});
+
+test("updating status does not erase notes", async () => {
+  const appliedAt = new Date("2026-08-15T12:00:00.000Z");
+  const context = trackingRepository(
+    "not_applied",
+    null,
+    () => appliedAt,
+    "Applied via company site.",
+  );
+
+  const result = await context.repository.updateApplicationStatus(
+    identity,
+    "applied",
+  );
+
+  assert.deepEqual(result, {
+    applicationStatus: "applied",
+    appliedAt,
+    notes: "Applied via company site.",
+  });
+});
+
+test("combined tracking update persists status and normalized notes", async () => {
+  const appliedAt = new Date("2026-08-15T12:00:00.000Z");
+  const context = trackingRepository("not_applied", null, () => appliedAt);
+
+  const result = await context.repository.updateApplicationTracking(
+    identity,
+    "applied",
+    "  Test application note  ",
+  );
+
+  assert.deepEqual(result, {
+    applicationStatus: "applied",
+    appliedAt,
+    notes: "Test application note",
+  });
+});
+
+test("invalid submitted application status is rejected", () => {
+  assert.throws(
+    () => parseApplicationStatus("withdrawn"),
+    /Invalid application status: withdrawn/,
+  );
 });
 
 test("invalid application statuses cannot be persisted", async () => {
@@ -199,12 +303,14 @@ test("invalid application statuses cannot be persisted", async () => {
   assert.equal(databaseCalled, false);
 });
 
-test("collection upserts preserve application status and appliedAt", async () => {
+test("collection upserts preserve application status, appliedAt, and notes", async () => {
   const appliedAt = new Date("2026-08-14T12:00:00.000Z");
+  let updateData: Record<string, unknown> | undefined;
   const persistedJob: Record<string, unknown> = {
     title: "Original collector title",
     applicationStatus: "interviewing",
     appliedAt,
+    notes: "Keep this manual note.",
   };
   const prisma = {
     job: {
@@ -214,6 +320,7 @@ test("collection upserts preserve application status and appliedAt", async () =>
       async upsert(args: {
         update: Record<string, unknown>;
       }): Promise<void> {
+        updateData = args.update;
         Object.assign(persistedJob, args.update);
       },
     },
@@ -229,6 +336,9 @@ test("collection upserts preserve application status and appliedAt", async () =>
   assert.equal(persistedJob.title, "Updated collector title");
   assert.equal(persistedJob.applicationStatus, "interviewing");
   assert.equal(persistedJob.appliedAt, appliedAt);
+  assert.equal(persistedJob.notes, "Keep this manual note.");
+  assert.ok(updateData);
+  assert.equal(Object.hasOwn(updateData, "notes"), false);
 });
 
 test("a null incoming postedAt preserves an existing persisted postedAt", async () => {
@@ -429,13 +539,16 @@ function trackingRepository(
   initialStatus: ApplicationStatus,
   initialAppliedAt: Date | null,
   now: () => Date = () => new Date("2026-08-15T12:00:00.000Z"),
+  initialNotes: string | null = null,
 ): { repository: JobRepository } {
   const state: {
     applicationStatus: ApplicationStatus;
     appliedAt: Date | null;
+    notes: string | null;
   } = {
     applicationStatus: initialStatus,
     appliedAt: initialAppliedAt,
+    notes: initialNotes,
   };
   const prisma = {
     job: {
@@ -443,13 +556,9 @@ function trackingRepository(
         return { ...state };
       },
       async update(args: {
-        data: {
-          applicationStatus: ApplicationStatus;
-          appliedAt: Date | null;
-        };
+        data: Partial<typeof state>;
       }): Promise<typeof state> {
-        state.applicationStatus = args.data.applicationStatus;
-        state.appliedAt = args.data.appliedAt;
+        Object.assign(state, args.data);
         return { ...state };
       },
     },

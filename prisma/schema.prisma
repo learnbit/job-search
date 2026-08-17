@@ -24,6 +24,7 @@ model Job {
   telegramNotifiedAt DateTime?
   applicationStatus String   @default("not_applied")
   appliedAt         DateTime?
+  notes             String?
 
   @@unique([source, externalId])
 }

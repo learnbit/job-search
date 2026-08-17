@@ -60,16 +60,22 @@ test("uses source and externalId as deterministic ordering tie-breakers", async 
   ]);
 });
 
-test("includes application tracking fields in list items", async () => {
+test("includes application tracking fields and notes in list items", async () => {
   const appliedAt = new Date("2026-08-14T12:00:00.000Z");
   const context = repositoryWithRows([
-    persistedJob({ applicationStatus: "interviewing", appliedAt }),
+    persistedJob({
+      applicationStatus: "interviewing",
+      appliedAt,
+      notes: "Recruiter screen scheduled.",
+    }),
   ]);
 
   const jobs = await context.repository.findJobsForList({});
 
   assert.equal(jobs[0]?.applicationStatus, "interviewing");
   assert.equal(jobs[0]?.appliedAt, appliedAt);
+  assert.equal(jobs[0]?.notes, "Recruiter screen scheduled.");
+  assert.equal(context.queries[0]?.select.notes, true);
 });
 
 test("rejects an invalid persisted application status", async () => {
@@ -131,6 +137,7 @@ type PersistedJobListRow = PersistedCollectedJobData & {
   readonly lastSeenAt: Date;
   readonly applicationStatus: string;
   readonly appliedAt: Date | null;
+  readonly notes: string | null;
 };
 
 function repositoryWithRows(rows: readonly PersistedJobListRow[]): {
@@ -171,6 +178,7 @@ function persistedJob(
     lastSeenAt: new Date("2026-08-15T11:00:00.000Z"),
     applicationStatus: "not_applied",
     appliedAt: null,
+    notes: null,
     ...overrides,
   };
 }
