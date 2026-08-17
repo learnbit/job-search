@@ -231,6 +231,56 @@ test("collection upserts preserve application status and appliedAt", async () =>
   assert.equal(persistedJob.appliedAt, appliedAt);
 });
 
+test("a null incoming postedAt preserves an existing persisted postedAt", async () => {
+  const existingPostedAt = new Date("2026-08-10T09:00:00.000Z");
+  const persistedJob: Record<string, unknown> = { postedAt: existingPostedAt };
+  let updateData: Record<string, unknown> | undefined;
+  const prisma = {
+    job: {
+      async findMany(): Promise<Array<typeof identity>> {
+        return [identity];
+      },
+      async upsert(args: { update: Record<string, unknown> }): Promise<void> {
+        updateData = args.update;
+        Object.assign(persistedJob, args.update);
+      },
+    },
+    async $transaction(operations: readonly Promise<unknown>[]): Promise<unknown[]> {
+      return Promise.all(operations);
+    },
+  } as unknown as PrismaClient;
+
+  await new JobRepository(prisma).saveMany([job({ postedAt: null })]);
+
+  assert.ok(updateData);
+  assert.equal(Object.hasOwn(updateData, "postedAt"), false);
+  assert.equal(persistedJob.postedAt, existingPostedAt);
+});
+
+test("a non-null incoming postedAt updates the persisted postedAt", async () => {
+  const incomingPostedAt = "2026-08-12T11:00:00.000Z";
+  let updateData: Record<string, unknown> | undefined;
+  const prisma = {
+    job: {
+      async findMany(): Promise<Array<typeof identity>> {
+        return [identity];
+      },
+      async upsert(args: { update: Record<string, unknown> }): Promise<void> {
+        updateData = args.update;
+      },
+    },
+    async $transaction(operations: readonly Promise<unknown>[]): Promise<unknown[]> {
+      return Promise.all(operations);
+    },
+  } as unknown as PrismaClient;
+
+  await new JobRepository(prisma).saveMany([
+    job({ postedAt: incomingPostedAt }),
+  ]);
+
+  assert.deepEqual(updateData?.postedAt, new Date(incomingPostedAt));
+});
+
 test("classifies one previously unseen job as inserted and new", () => {
   const unseenJob = job();
 

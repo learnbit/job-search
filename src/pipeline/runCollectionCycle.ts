@@ -80,7 +80,12 @@ export function createCollectionCycleRunner(
 
   if (greenhouseBoards.length > 0) {
     registrations.push(
-      configureCollector(new GreenhouseCollector(), greenhouseBoards),
+      configureCollector(
+        new GreenhouseCollector(globalThis.fetch, console, (jobs) =>
+          filterJobs(jobs, filters),
+        ),
+        greenhouseBoards,
+      ),
     );
   }
 

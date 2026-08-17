@@ -17,3 +17,8 @@ export interface GreenhouseJob {
 export interface GreenhouseJobsResponse {
   jobs: GreenhouseJob[];
 }
+
+export interface GreenhouseJobDetail {
+  id: number;
+  first_published?: string | null;
+}

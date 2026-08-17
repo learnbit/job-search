@@ -148,7 +148,7 @@ export class JobRepository {
             workplace: job.workplace,
             url: job.url,
             description: job.description,
-            postedAt: job.postedAt,
+            ...(job.postedAt === null ? {} : { postedAt: job.postedAt }),
             updatedAt: job.updatedAt,
             lastSeenAt: seenAt,
           },
