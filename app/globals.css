@@ -116,6 +116,20 @@ a {
   margin: 0;
 }
 
+.job-geo-hint {
+  margin-block: -0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.job-geo-warning {
+  color: #92400e;
+}
+
+.job-geo-worldwide {
+  color: #166534;
+}
+
 .job-posted-unavailable {
   margin-block: -0.5rem 1rem;
 }

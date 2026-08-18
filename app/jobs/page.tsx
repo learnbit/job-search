@@ -1,6 +1,10 @@
 import { jobFilters } from "../../src/config/jobFilters";
 import { prisma } from "../../src/db/prisma";
 import {
+  getJobGeographyHint,
+  type JobGeographyHint,
+} from "../../src/domain/jobGeography";
+import {
   formatDiscoveredDate,
   formatPostedDate,
 } from "../../src/domain/jobRecency";
@@ -42,6 +46,7 @@ export default async function JobsPage() {
 
 function JobCard({ job, now }: { job: JobListItem; now: Date }) {
   const discoveredLabel = formatDiscoveredDate(job.createdAt, now);
+  const geographyHint = getJobGeographyHint(job.location, job.workplace);
 
   return (
     <article className="job-card">
@@ -78,6 +83,8 @@ function JobCard({ job, now }: { job: JobListItem; now: Date }) {
         </div>
       </dl>
 
+      <GeographyHint hint={geographyHint} />
+
       {job.postedAt === null ? (
         <p className="job-posted-unavailable">
           {formatPostedDate(job.postedAt, now)}
@@ -103,6 +110,27 @@ function JobCard({ job, now }: { job: JobListItem; now: Date }) {
       </a>
     </article>
   );
+}
+
+function GeographyHint({ hint }: { hint: JobGeographyHint }) {
+  if (hint.kind === "worldwide") {
+    return (
+      <p className="job-geo-hint job-geo-worldwide">
+        <span aria-hidden="true">🌍</span> Worldwide remote
+      </p>
+    );
+  }
+
+  if (hint.kind === "possibly_restricted") {
+    return (
+      <p className="job-geo-hint job-geo-warning">
+        <span aria-hidden="true">⚠</span> May be geographically restricted:{" "}
+        {hint.context}
+      </p>
+    );
+  }
+
+  return null;
 }
 
 function formatLabel(value: string): string {
